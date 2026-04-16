@@ -4,18 +4,18 @@ import { before, after } from "@vendetta/patcher"
 import { semanticColors } from "@vendetta/ui"
 import { getAssetIDByName } from "@vendetta/ui/assets"
 import { Forms } from "@vendetta/ui/components"
-import { findInReactTree } from "@vendetta/utils"
-import { settings } from ".."
-
-import { DeepL, GTranslate } from "../api"
 import { showToast } from "@vendetta/ui/toasts"
 import { logger } from "@vendetta"
+import { findInReactTree } from "@vendetta/utils"
+import { settings } from ".."
+import { translate } from "../api"
 
 const LazyActionSheet = findByProps("openLazy", "hideActionSheet")
-const ActionSheetRow = findByProps("ActionSheetRow")?.ActionSheetRow ?? Forms.FormRow // no icon if legacy
+const ActionSheetRow = findByProps("ActionSheetRow")?.ActionSheetRow ?? Forms.FormRow
 const MessageStore = findByStoreName("MessageStore")
 const ChannelStore = findByStoreName("ChannelStore")
 const separator = "\n"
+const MAX_CACHE = 50
 
 const styles = stylesheet.createThemedStyleSheet({
     iconComponent: {
@@ -34,31 +34,29 @@ export default () => before("openLazy", LazyActionSheet, ([component, key, msg])
         const unpatch = after("default", instance, (_, component) => {
             React.useEffect(() => () => { unpatch() }, [])
 
-            // this thing is not backward compatible
             const buttons = findInReactTree(component, x => x?.[0]?.type?.name === "ActionSheetRow")
             if (!buttons) return
             const position = Math.max(buttons.findIndex((x: any) => x.props.message === i18n.Messages.MARK_UNREAD), 0)
 
-            const originalMessage = MessageStore.getMessage(
-                message.channel_id,
-                message.id
-            )
+            const originalMessage = MessageStore.getMessage(message.channel_id, message.id)
             if (!originalMessage?.content && !message.content) return
 
             const messageId = originalMessage?.id ?? message.id
             const messageContent = originalMessage?.content ?? message.content
-            const existingCachedObject = cachedData.find((o: any) => Object.keys(o)[0] === messageId, "cache object")
+            const existingCachedObject = cachedData.find((o: any) => Object.keys(o)[0] === messageId)
 
             const translateType = existingCachedObject ? "Revert" : "Translate"
-            const icon = translateType === "Translate" ? getAssetIDByName("LanguageIcon") : getAssetIDByName("ic_highlight")
+            const icon = translateType === "Translate"
+                ? getAssetIDByName("LanguageIcon")
+                : getAssetIDByName("ic_highlight")
 
-            const translate = async () => {
+            const onPress = async () => {
                 LazyActionSheet.hideActionSheet()
                 try {
                     const target_lang = settings.target_lang
                     const isTranslated = translateType === "Translate"
                     const isImmersive = settings.immersive_enabled
-                    
+
                     if (!originalMessage) return
 
                     const emojiRegex = /<(a?):\w+:\d+>|<@!?\d+>|<#\d+>/g
@@ -67,29 +65,24 @@ export default () => before("openLazy", LazyActionSheet, ([component, key, msg])
                         placeholders.push(match)
                         return ` [[${placeholders.length - 1}]] `
                     })
-                    var translate
-                    switch(settings.translator) {
-                        case 0:
-                            console.log("Translating with DeepL: ", textToTranslate)
-                            translate = await DeepL.translate(textToTranslate, undefined, target_lang, !isTranslated)
-                            break
-                        case 1:
-                            console.log("Translating with GTranslate: ", textToTranslate)
-                            translate = await GTranslate.translate(textToTranslate, undefined, target_lang, !isTranslated)
-                            break
-                    }
-                    
-                    let translatedText = translate.text
+
+                    logger.log(`[Dislate] translator=${settings.translator} target=${target_lang} text=${textToTranslate}`)
+                    const result = await translate(textToTranslate, target_lang, !isTranslated)
+
+                    let translatedText = result.text
                     placeholders.forEach((original, index) => {
-                        const pRegex = new RegExp(`\\[\\[\\s*${index}\\s*\\]\\]`, 'g')
-                        translatedText = translatedText.replace(pRegex, original)
+                        translatedText = translatedText.replace(
+                            new RegExp(`\\[\\[\\s*${index}\\s*\\]\\]`, "g"),
+                            original
+                        )
                     })
 
                     const finalContent = isTranslated
-                                ? (isImmersive
-                                    ? `${messageContent}${separator}${translatedText.trim()} \`[${target_lang?.toLowerCase()}]\``
-                                    : `${translatedText.trim()} \`[${target_lang?.toLowerCase()}]\``)
-                                : (existingCachedObject as object)[messageId]
+                        ? (isImmersive
+                            ? `${messageContent}${separator}${translatedText.trim()} \`[${target_lang?.toLowerCase()}]\``
+                            : `${translatedText.trim()} \`[${target_lang?.toLowerCase()}]\``)
+                        : (existingCachedObject as any)[messageId]
+
                     FluxDispatcher.dispatch({
                         type: "MESSAGE_UPDATE",
                         message: {
@@ -99,18 +92,20 @@ export default () => before("openLazy", LazyActionSheet, ([component, key, msg])
                             content: finalContent,
                         },
                         log_edit: false,
-                        otherPluginBypass: true // antied
+                        otherPluginBypass: true
                     })
 
-                    isTranslated
-                        ? cachedData.unshift({ [messageId]: messageContent })
-                        : cachedData = cachedData.filter((e: any) => e !== existingCachedObject, "cached data override")
+                    if (isTranslated) {
+                        cachedData.unshift({ [messageId]: messageContent })
+                        if (cachedData.length > MAX_CACHE) cachedData.length = MAX_CACHE
+                    } else {
+                        cachedData = cachedData.filter(e => e !== existingCachedObject)
+                    }
                 } catch (e) {
                     showToast("Failed to translate message. Please check Debug Logs for more info.", getAssetIDByName("Small"))
                     logger.error(e)
                 }
             }
-
 
             buttons.splice(position, 0, (
                 <ActionSheetRow
@@ -127,7 +122,7 @@ export default () => before("openLazy", LazyActionSheet, ([component, key, msg])
                             )}
                         />
                     }
-                    onPress={translate}
+                    onPress={onPress}
                 />
             ))
         })
