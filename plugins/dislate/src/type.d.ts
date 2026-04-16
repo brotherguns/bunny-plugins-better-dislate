@@ -7,7 +7,9 @@ export interface DeepLResponse {
 }
 export interface GTranslateResponse {
     src?: string;
-    sentences?: {
-        trans?: string;
-    }[];
+    sentences?: { trans?: string }[];
+}
+export interface TranslateResult {
+    source_lang: string
+    text: string
 }
