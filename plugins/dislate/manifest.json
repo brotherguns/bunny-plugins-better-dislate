@@ -3,20 +3,8 @@
     "description": "Translates text into a desired language.",
     "authors": [
         {
-            "name": "Acquite",
-            "id": "581573474296791211"
-        },
-        {
-            "name": "sapphire",
-            "id": "757982547861962752"
-        },
-        {
-        	"name": "Rico040",
-        	"id": "619474349845643275"
-        },
-        {
-        	"name": "chrysoljq",
-        	"id": "791663810594603028"
+            "name": "brotherguns5624",
+            "id": "877502759404974110"
         }
     ],
     "main": "src/index.ts",
