@@ -12,47 +12,35 @@ const { ScrollView } = ReactNative
 export default () => {
     useProxy(settings)
     const [query, setQuery] = React.useState("")
-    if (settings.translator == 0) {
-        return (<ScrollView style={{ flex: 1 }}>
+
+    // Pick language list based on active translator; no duplicate branches
+    const langs = settings.translator === 0 ? DeepLLangs : GTranslateLangs
+    const filtered = Object.entries(langs).filter(([key]) =>
+        key.toLowerCase().includes(query.toLowerCase())
+    )
+
+    return (
+        <ScrollView style={{ flex: 1 }}>
             <Search
                 style={{ padding: 15 }}
                 placeholder="Search Language"
-                onChangeText={(text: string) => {
-                    setQuery(text)
-                }}
+                onChangeText={(text: string) => setQuery(text)}
             />
-            {
-                Object.entries(DeepLLangs).filter(([key, value]) => key.toLowerCase().includes(query.toLowerCase())).map(([key, value]) => <FormRow
+            {filtered.map(([key, value]) => (
+                <FormRow
+                    key={value}
                     label={key}
-                    trailing={() => <FormRow.Arrow />}
+                    trailing={settings.target_lang === value
+                        ? () => <FormRow.Icon source={getAssetIDByName("check")} />
+                        : () => <FormRow.Arrow />
+                    }
                     onPress={() => {
-                        if (settings.target_lang == value) return
+                        if (settings.target_lang === value) return
                         settings.target_lang = value
                         showToast(`Saved ToLang to ${key}`, getAssetIDByName("check"))
                     }}
-                />)
-            }
-        </ScrollView>)
-    } else {
-        return (<ScrollView style={{ flex: 1 }}>
-            <Search
-                style={{ padding: 15 }}
-                placeholder="Search Language"
-                onChangeText={(text: string) => {
-                    setQuery(text)
-                }}
-            />
-            {
-                Object.entries(GTranslateLangs).filter(([key, value]) => key.toLowerCase().includes(query.toLowerCase())).map(([key, value]) => <FormRow
-                    label={key}
-                    trailing={() => <FormRow.Arrow />}
-                    onPress={() => {
-                        if (settings.target_lang == value) return
-                        settings.target_lang = value
-                        showToast(`Saved ToLang to ${key}`, getAssetIDByName("check"))
-                    }}
-                />)
-            }
-        </ScrollView>)
-    }
+                />
+            ))}
+        </ScrollView>
+    )
 }
