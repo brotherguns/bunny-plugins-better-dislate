@@ -13,7 +13,7 @@ const ApplicationCommandType        = { CHAT: 1 }          as const
 const ApplicationCommandInputType   = { BUILT_IN_TEXT: 1 } as const
 const ApplicationCommandOptionType  = { STRING: 3 }        as const
 
-const ClydeUtils = findByProps("sendBotMessage")
+const ClydeUtils     = findByProps("sendBotMessage")
 const MessageActions = findByProps("sendMessage", "editMessage")
 const PendingReplyStore = findByStoreName("PendingReplyStore")
 
@@ -64,29 +64,35 @@ export default () => {
                         const channelId = ctx.channel.id
                         const pendingReply = PendingReplyStore?.getPendingReply?.(channelId)
 
-                        if (pendingReply) {
-                            // Send manually so we can attach the reply reference
+                        if (pendingReply?.message) {
+                            // Send manually with reply reference.
+                            // Discord mobile's real signature is:
+                            //   sendMessage(channelId, message, shouldQueue, options)
+                            // The reply ref goes in options.messageReference, NOT as arg 3.
                             MessageActions.sendMessage(
                                 channelId,
                                 { content: content.text },
+                                false,
                                 {
                                     messageReference: {
-                                        guild_id: pendingReply.message?.guild_id,
+                                        guild_id:   pendingReply.message.guild_id,
                                         channel_id: channelId,
-                                        message_id: pendingReply.message?.id,
+                                        message_id: pendingReply.message.id,
                                     },
-                                    shouldMention: pendingReply.shouldMention ?? true,
+                                    allowedMentions: {
+                                        replied_user: pendingReply.shouldMention ?? true,
+                                    },
                                 }
                             )
-                            // Clear the pending reply indicator from the UI
+                            // Dismiss the reply bar in the UI
                             FluxDispatcher.dispatch({
                                 type: "DELETE_PENDING_REPLY",
                                 channelId,
                             })
-                            // Return undefined so Kettu's wrapper doesn't double-send
+                            // Resolve with undefined so Kettu's wrapper doesn't double-send
                             resolve(undefined)
                         } else {
-                            // No reply active — let Kettu's wrapper handle the send normally
+                            // No active reply — let Kettu's wrapper handle it normally
                             resolve({ content: content.text })
                         }
                     },
