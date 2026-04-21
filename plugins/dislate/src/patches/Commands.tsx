@@ -2,7 +2,8 @@ import { logger } from "@vendetta"
 import { registerCommand } from "@vendetta/commands"
 import { showConfirmationAlert } from "@vendetta/ui/alerts"
 import { Codeblock } from "@vendetta/ui/components"
-import { findByProps } from "@vendetta/metro"
+import { findByProps, findByStoreName } from "@vendetta/metro"
+import { FluxDispatcher } from "@vendetta/metro/common"
 import { settings } from ".."
 import { DeepLLangs, GTranslateLangs } from "../lang"
 import { translate } from "../api"
@@ -13,6 +14,8 @@ const ApplicationCommandInputType   = { BUILT_IN_TEXT: 1 } as const
 const ApplicationCommandOptionType  = { STRING: 3 }        as const
 
 const ClydeUtils = findByProps("sendBotMessage")
+const MessageActions = findByProps("sendMessage", "editMessage")
+const PendingReplyStore = findByStoreName("PendingReplyStore")
 
 export default () => {
     // Vary language choices based on the active translator at load time
@@ -52,11 +55,41 @@ export default () => {
             const [text, lang] = args
             try {
                 let content = await translate(text.value, lang.value)
+
                 return await new Promise((resolve): void => showConfirmationAlert({
                     title: "Are you sure you want to send it?",
                     content: <Codeblock>{content.text}</Codeblock>,
                     confirmText: "Yep, send it!",
-                    onConfirm: () => resolve({ content: content.text }),
+                    onConfirm: () => {
+                        const channelId = ctx.channel.id
+                        const pendingReply = PendingReplyStore?.getPendingReply?.(channelId)
+
+                        if (pendingReply) {
+                            // Send manually so we can attach the reply reference
+                            MessageActions.sendMessage(
+                                channelId,
+                                { content: content.text },
+                                {
+                                    messageReference: {
+                                        guild_id: pendingReply.message?.guild_id,
+                                        channel_id: channelId,
+                                        message_id: pendingReply.message?.id,
+                                    },
+                                    shouldMention: pendingReply.shouldMention ?? true,
+                                }
+                            )
+                            // Clear the pending reply indicator from the UI
+                            FluxDispatcher.dispatch({
+                                type: "DELETE_PENDING_REPLY",
+                                channelId,
+                            })
+                            // Return undefined so Kettu's wrapper doesn't double-send
+                            resolve(undefined)
+                        } else {
+                            // No reply active — let Kettu's wrapper handle the send normally
+                            resolve({ content: content.text })
+                        }
+                    },
                     cancelText: "Nope, don't send it"
                 }))
             } catch (e) {
