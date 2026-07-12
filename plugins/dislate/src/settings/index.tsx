@@ -9,7 +9,7 @@ import { settings } from ".."
 import TargetLang from "./TargetLang"
 import TranslatorPage from "./TranslatorPage"
 
-const { ScrollView, Text } = ReactNative
+const { ScrollView, Text, TextInput, View } = ReactNative
 const { FormRow, FormSwitchRow } = Forms
 
 // Modern Discord Table components — fall back to legacy Forms if unavailable
@@ -17,7 +17,7 @@ const TableSwitchRow = findByProps("TableSwitchRow")?.TableSwitchRow
 const _TableRow = findByProps("TableRow")?.TableRow as any
 const TableRow: typeof _TableRow & { Icon?: any } = _TableRow
 
-const TRANSLATOR_NAMES = ["DeepL", "Google Translate"]
+const TRANSLATOR_NAMES = ["DeepL", "Google Translate", "Gemini"]
 
 const styles = stylesheet.createThemedStyleSheet({
     subheaderText: {
@@ -75,6 +75,31 @@ export default () => {
                 {...navTrailing}
                 onPress={() => navigation.push("VendettaCustomPage", { title: "Translator", render: TranslatorPage })}
             />
+            {(settings.translator ?? 1) === 2 && (
+                <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                    <Text style={[styles.subheaderText, { textAlign: "left", marginBottom: 6, marginTop: 0, fontSize: 12 }]}>
+                        Gemini API Key
+                    </Text>
+                    <TextInput
+                        value={settings.gemini_api_key ?? ""}
+                        onChangeText={(v: string) => { settings.gemini_api_key = v }}
+                        placeholder="AIza..."
+                        placeholderTextColor="#888"
+                        secureTextEntry={true}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        style={{
+                            color: "#fff",
+                            backgroundColor: "#1e1f22",
+                            borderRadius: 8,
+                            paddingHorizontal: 12,
+                            paddingVertical: 10,
+                            fontSize: 14,
+                            fontFamily: constants.Fonts.PRIMARY_SEMIBOLD
+                        }}
+                    />
+                </View>
+            )}
             <Text style={styles.subheaderText} onPress={() => url.openURL("https://github.com/Rico040/bunny-plugins")}>
                 {`Build: (${manifest.hash.substring(0, 7)})`}
             </Text>

@@ -13,7 +13,8 @@ const TableRadioRow = findByProps("TableRadioRow")?.TableRadioRow
 
 const TRANSLATORS = [
     { label: "DeepL", value: "0" },
-    { label: "Google Translate", value: "1" }
+    { label: "Google Translate", value: "1" },
+    { label: "Gemini", value: "2" }
 ]
 
 export default () => {
