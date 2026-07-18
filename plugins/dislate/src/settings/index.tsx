@@ -17,7 +17,7 @@ const TableSwitchRow = findByProps("TableSwitchRow")?.TableSwitchRow
 const _TableRow = findByProps("TableRow")?.TableRow as any
 const TableRow: typeof _TableRow & { Icon?: any } = _TableRow
 
-const TRANSLATOR_NAMES = ["DeepL", "Google Translate", "Gemini"]
+const TRANSLATOR_NAMES = ["DeepL", "Google Translate", "Gemini", "Groq"]
 
 const styles = stylesheet.createThemedStyleSheet({
     subheaderText: {
@@ -84,6 +84,31 @@ export default () => {
                         value={settings.gemini_api_key ?? ""}
                         onChangeText={(v: string) => { settings.gemini_api_key = v }}
                         placeholder="AIza..."
+                        placeholderTextColor="#888"
+                        secureTextEntry={true}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        style={{
+                            color: "#fff",
+                            backgroundColor: "#1e1f22",
+                            borderRadius: 8,
+                            paddingHorizontal: 12,
+                            paddingVertical: 10,
+                            fontSize: 14,
+                            fontFamily: constants.Fonts.PRIMARY_SEMIBOLD
+                        }}
+                    />
+                </View>
+            )}
+            {(settings.translator ?? 1) === 3 && (
+                <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                    <Text style={[styles.subheaderText, { textAlign: "left", marginBottom: 6, marginTop: 0, fontSize: 12 }]}>
+                        Groq API Key
+                    </Text>
+                    <TextInput
+                        value={settings.groq_api_key ?? ""}
+                        onChangeText={(v: string) => { settings.groq_api_key = v }}
+                        placeholder="gsk_..."
                         placeholderTextColor="#888"
                         secureTextEntry={true}
                         autoCapitalize="none"

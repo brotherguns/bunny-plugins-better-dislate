@@ -8,6 +8,9 @@ export const settings: {
     target_lang?: string
     translator?: number
     immersive_enabled?: boolean
+    gemini_api_key?: string
+    groq_api_key?: string
+    groq_model?: string
 } = storage
 
 settings.source_lang ??= "auto"
