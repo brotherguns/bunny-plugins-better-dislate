@@ -19,7 +19,7 @@ const translate = async (text: string, source_lang = "auto", target_lang: string
                 "Authorization": `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: settings.groq_model?.trim() || "quen/quen3.6-27b",
+                model: settings.groq_model?.trim() || "qwen/qwen3.6-27b",
                 temperature: 0.1,
                 messages: [{ role: "user", content: prompt }]
             })
@@ -31,8 +31,10 @@ const translate = async (text: string, source_lang = "auto", target_lang: string
         }
 
         const data = await res.json()
-        const translated = data?.choices?.[0]?.message?.content?.trim()
+        let translated = data?.choices?.[0]?.message?.content?.trim()
         if (!translated) throw new Error("Empty response from Groq")
+        // Strip <think>...</think> reasoning blocks from Qwen/DeepSeek models
+        translated = translated.replace(/<think>[\s\S]*?<\/think>/g, "").trim()
 
         return { source_lang, text: translated }
     } catch (e) {
