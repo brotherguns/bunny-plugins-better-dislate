@@ -19,7 +19,7 @@ const translate = async (text: string, source_lang = "auto", target_lang: string
                 "Authorization": `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: settings.groq_model?.trim() || "llama-3.3-70b-versatile",
+                model: settings.groq_model?.trim() || "quen/quen3.6-27b",
                 temperature: 0.1,
                 messages: [{ role: "user", content: prompt }]
             })
